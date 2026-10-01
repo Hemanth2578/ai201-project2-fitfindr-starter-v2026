@@ -23,9 +23,37 @@ the description has to say what is *in* the list.
 import config  # noqa: F401 — you'll use this in search_listings
 from generate import generate
 from utils.data_loader import load_listings
+import re
 
 
 # ── Tool 1: search_listings ───────────────────────────────────────────────────
+
+_STOPWORDS = {
+    "a", "an", "and", "are", "as", "at", "be",
+    "for", "from", "i", "in", "is", "it",
+    "me", "my", "of", "on", "or", "the", "to", "with",
+    "find", "looking", "need", "please", "show", "want",
+}
+
+def _keywords(text: str) -> set[str]:
+    """
+    Lowercase words worth matching on, stopwords removed.
+    """
+    words = re.findall(r"[a-z0-9]+", (text or "").lower())
+    return {w for w in words if w not in _STOPWORDS and len(w)>1}
+
+def _size_tokens(size: str) -> set[str]:
+    cleaned = re.sub(r"\([^)]*\)", " ", size or "") # drop parenthesis
+    parts = [p.strip().upper for p in cleaned.split("/")]
+    return (p for p in parts if p)
+
+def _size_match(wanted: str, listing_size: str) -> bool:
+    if not wanted:
+        return True # any size is accepted
+    listing_tokens = _size_tokens(listing_size)
+    if any(token.startswith("ONE SIZE") for token in listing_tokens): 
+        return True
+    return bool(_size_tokens(wanted) & listing_tokens)
 
 def search_listings(
     description: str,
@@ -79,6 +107,11 @@ def search_listings(
         python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
     """
     # TODO: replace this with your implementation
+    # listings = load_listings()
+    # filter = lambda x: (not size or x['size'] == size) and (not max_price or x['price'] <= max_price)
+    # filtered_listings = filter(listings)
+
+
     return []
 
 
