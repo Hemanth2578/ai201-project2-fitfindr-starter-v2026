@@ -41,8 +41,6 @@
 
 <!-- Three or four sentences: what a user asks for, and what they get back. -->
 
-
-
 ---
 
 ## Tool Inventory
@@ -60,23 +58,35 @@
 ### `search_listings`
 
 - **What it does:**
-- **Inputs:** <!-- name and type each: `max_price` (float), not "a price" -->
+  `search_listings` takes a description and the optional filters `size` and `max_price`, and returns the listings that match all of them.
+- **Inputs:**
+  `description` (string), `size` (string | None, optional), `max_price` (float | None, optional)
 - **Returns:**
+  A list of matching listing dicts, each with the fields `id`, `title`, `description`, `category`, `style_tags`, `size`, `condition`, `price`, `colors`, `brand`, `platform`
 - **When it has nothing:**
+  An empty list (`[]`), meaning no listings match the description, size and max_price.
 
 ### `suggest_outfit`
 
 - **What it does:**
+  `suggest_outfit` takes a new item and the user's wardrobe and suggests one or two outfits.
 - **Inputs:**
+  `new_item` (dict), `wardrobe` (dict)
 - **Returns:**
+  A string (the LLM's response) describing one or two outfits that pair the new item with pieces from the user's wardrobe.
 - **When it has nothing:**
+  If the wardrobe is empty (`wardrobe["items"]` is an empty list), returns general styling ideas for the new item as a non-empty string, instead of raising an error or returning an empty string.
 
 ### `create_fit_card`
 
 - **What it does:**
+  `create_fit_card` takes the suggested outfit and the new item and writes a short caption someone would actually post about the find.
 - **Inputs:**
+  `outfit` (string), `new_item` (dict)
 - **Returns:**
+  A string containing a short caption someone would actually post about the find.
 - **When it has nothing:**
+  If `outfit` is empty or only whitespace, returns a descriptive message string instead of a caption, rather than raising an error.
 
 ---
 
@@ -94,6 +104,7 @@
      function have to be real. -->
 
 **Branch rule:**
+If `search_listings` returns an empty list, put a message in `session["error"]` telling the user what they could change (not just "No results"), and return the session without calling any other tool. Otherwise, choose an item and store it in `session["selected_item"]`, call `suggest_outfit` with the selected item and the wardrobe and store the result in `session["outfit_suggestion"]`, then call `create_fit_card` and store the result in `session["fit_card"]`. Finally, return the session.
 
 **Where it lives:** `agent.py::run_agent`
 
@@ -147,15 +158,15 @@ $ python -c "from tools import create_fit_card; ..."
 
 **Moment 1**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- _What I asked for:_
+- _What came back:_
+- _What I changed:_
 
 **Moment 2**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- _What I asked for:_
+- _What came back:_
+- _What I changed:_
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
@@ -176,12 +187,12 @@ $ python -c "from tools import create_fit_card; ..."
      into results/. Paste it here and fill in the verdicts. -->
 
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
-|---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| --------- | ------ | ----- | ----- | ----- | ----- | ----- | ------- |
+| 1.        |        |       |       |       |       |       |         |
+| 2.        |        |       |       |       |       |       |         |
+| 3.        |        |       |       |       |       |       |         |
+| 4.        |        |       |       |       |       |       |         |
+| 5.        |        |       |       |       |       |       |         |
 
 **Real output from one try**, pasted as text, naming the file and function
 that produced it:
@@ -210,17 +221,15 @@ that produced it:
      Look for a pattern. Three misses on the same tool is one problem, not
      three. -->
 
-| # | Criterion | Target | Verdict | How I decided |
-|---|---|---|---|---|
-| 1 |  |  |  |  |
-| 2 |  |  |  |  |
-| 3 |  |  |  |  |
-| 4 |  |  |  |  |
-| 5 |  |  |  |  |
+| #   | Criterion | Target | Verdict | How I decided |
+| --- | --------- | ------ | ------- | ------------- |
+| 1   |           |        |         |               |
+| 2   |           |        |         |               |
+| 3   |           |        |         |               |
+| 4   |           |        |         |               |
+| 5   |           |        |         |               |
 
 **Diagnoses**
-
-
 
 ---
 
@@ -253,8 +262,6 @@ behaved differently afterwards. If the rewire didn't work, say exactly where it
 broke — the error text and the last thing that worked. That earns the point in
 full. -->
 
-
-
 ---
 
 ## The Improvement
@@ -271,19 +278,17 @@ full. -->
 ### Run Log — After
 
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
-|---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| --------- | ------ | ----- | ----- | ----- | ----- | ----- | ------- |
+| 1.        |        |       |       |       |       |       |         |
+| 2.        |        |       |       |       |       |       |         |
+| 3.        |        |       |       |       |       |       |         |
+| 4.        |        |       |       |       |       |       |         |
+| 5.        |        |       |       |       |       |       |         |
 
 **Did it help, and how do I know:**
 
 <!-- If it made things worse, say that. Honestly reported, that earns full
      credit and is more interesting than one that worked. -->
-
-
 
 ---
 
@@ -292,8 +297,6 @@ full. -->
 <!-- For each criterion still missed: what you'd do, and why you stopped where
      you did. "I ran out of time" is fine if it's true. Pretending nothing is
      left is not. -->
-
-
 
 <!-- ═════════════════════════════════════════════════════════════════════
 
