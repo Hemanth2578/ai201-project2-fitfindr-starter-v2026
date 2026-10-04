@@ -36,24 +36,27 @@ _STOPWORDS = {
 }
 
 def _keywords(text: str) -> set[str]:
-    """
-    Lowercase words worth matching on, stopwords removed.
-    """
-    words = re.findall(r"[a-z0-9]+", (text or "").lower())
-    return {w for w in words if w not in _STOPWORDS and len(w)>1}
+    """Lowercase words worth matching on, stopwords removed."""
+    words = re.findall(r"[a-z0-9']+", (text or "").lower())
+    return {w for w in words if w not in _STOPWORDS and len(w) > 1}
 
 def _size_tokens(size: str) -> set[str]:
-    cleaned = re.sub(r"\([^)]*\)", " ", size or "") # drop parenthesis
-    parts = [p.strip().upper for p in cleaned.split("/")]
-    return (p for p in parts if p)
+    cleaned = re.sub(r"\([^)]*\)", " ", size or "") # drop parentheticals
+    parts = [p.strip().upper() for p in cleaned.split("/")]
+    return {p for p in parts if p}
 
-def _size_match(wanted: str, listing_size: str) -> bool:
+def _size_matches(wanted: str, listing_size: str) -> bool:
     if not wanted:
-        return True # any size is accepted
+        return True
     listing_tokens = _size_tokens(listing_size)
-    if any(token.startswith("ONE SIZE") for token in listing_tokens): 
+    if any(token.startswith("ONE SIZE") for token in listing_tokens):
         return True
     return bool(_size_tokens(wanted) & listing_tokens)
+
+def _score_listing(listing: dict, keywords: set[str]) -> int:
+    """Count how many keywords appear in the listing discription"""
+    listing_keywords = _keywords(listing.get("description", ""))
+    return len(keywords & listing_keywords)
 
 def search_listings(
     description: str,
@@ -107,15 +110,23 @@ def search_listings(
         python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
     """
     # TODO: replace this with your implementation
-    # listings = load_listings()
-    # filter = lambda x: (not size or x['size'] == size) and (not max_price or x['price'] <= max_price)
-    # filtered_listings = filter(listings)
-
-
-    return []
+    listings = load_listings()
+    parsed_keywords = _keywords(description)
+    size_price_filter = lambda x: (not size or _size_matches(size, x['size'])) and (not max_price or x['price'] <= abs(max_price))
+    filtered_listings = list(filter(size_price_filter, listings))
+    scored_listings = [(listing, _score_listing(listing, parsed_keywords)) for listing in filtered_listings]
+    scored_listings = [listing for listing in scored_listings if listing[1]>0]
+    scored_listings.sort(key=lambda x: x[1], reverse=True)
+    matching_listings = [listing[0] for listing in scored_listings][:config.SEARCH_RESULT_LIMIT]
+    return matching_listings if matching_listings else []
 
 
 # ── Tool 2: suggest_outfit ────────────────────────────────────────────────────
+def _wardrobe_items_text(items: list[dict]) -> str:
+    text = ""
+    for item in items:
+        text += f"id={item['id']}, name={item['name']}, category={item['category']}, colors={item['colors']}, style_tags={item['style_tags']}, notes: {item.get('notes', '')}\n"
+    return text
 
 def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
     """
@@ -146,7 +157,30 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
         python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[0], get_example_wardrobe()))"
     """
     # TODO: replace this with your implementation
-    return ""
+    if not wardrobe or "items" not in wardrobe:
+        wardrobe = {"items": []}
+    items = wardrobe.get("items", []) or []
+
+    if not items:
+        prompt = f"""
+        You are a practical personal stylist. Suggest one or two wearable ways to style this thrifted item using common clothing basics.
+        The user has not listed any wardrobe items, so do not imply they own specific pieces.
+
+        Thrifted item: {new_item}
+        """
+    else:
+        wardrobe_text = _wardrobe_items_text(items)
+        prompt = f"""
+        You are a practical personal stylist. Suggest one or two wearable outfits centered on this thrifted item.
+        Build each outfit using at least one piece from the user's wardrobe, and name the pieces you use.
+        Do not claim the user owns anything that is not listed.
+
+        Thrifted item: {new_item}
+        Wardrobe items:
+        {wardrobe_text}
+        """
+
+    return generate(prompt)
 
 
 # ── Tool 3: create_fit_card ───────────────────────────────────────────────────
@@ -186,4 +220,14 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
         python -c "from tools import create_fit_card; from utils.data_loader import load_listings; print(create_fit_card('jeans and white sneakers', load_listings()[0]))"
     """
     # TODO: replace this with your implementation
-    return ""
+    if not outfit.strip():
+        return "No outfit suggestion provided. Please provide an outfit description to create a fit card."
+    prompt = f"""
+    You are a social media content creator. Write a two-to-four sentence caption for a post about this thrifted item and the suggested outfit.
+    The caption should read like a real post, mention the item and its price and platform once each, and be specific about the vibe.
+    
+    Outfit suggestion: {outfit}
+    Thrifted item: {new_item}
+    """
+
+    return generate(prompt)
