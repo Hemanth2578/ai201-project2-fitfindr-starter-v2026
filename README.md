@@ -41,6 +41,8 @@
 
 <!-- Three or four sentences: what a user asks for, and what they get back. -->
 
+You describe a thrifted piece you're looking for in plain words, like "vintage graphic tee under $30", and can add a size or a price limit. FitFindr finds a matching secondhand item and tells you what it is, how much it costs and where to buy it. It then shows you how to wear it with clothes you already own, plus a short caption ready to post about your find. If nothing matches, it tells you what to change, like using broader words, trying another size or raising your budget.
+
 ---
 
 ## Tool Inventory
@@ -128,8 +130,6 @@ The session fills these fields in order: the parsed query goes into `parsed`, an
 ```
 $ python app.py ask "vintage graphic tee under $30"
 
-```
-
 [1] parse_query
 in: vintage graphic tee under $30
 out: dict with keys: description, size, max_price
@@ -165,20 +165,18 @@ This look leans into the vintage, worn-in vibe of the tour tee by pairing it wit
 Fit card: Scored this vintage 2003 tour bootleg graphic tee for just $24 on Depop and I'm obsessed! I paired it with baggy denim and combat boots for the ultimate 90s grunge streetwear fit. That effortless, worn-in vibe is unmatched. ✨🖤
 
 2 model calls this session, 1060 prompt + 260 output tokens
+```
 
 **The three tools, tested one at a time**
 
 ```
 $ python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
 
-```
-
 [{'id': 'lst_002', 'title': 'Y2K Baby Tee — Butterfly Print', 'description': 'Super cute early 2000s baby tee with butterfly graphic. Fitted crop length. Tag says medium but fits like a small.', 'category': 'tops', 'style_tags': ['y2k', 'vintage', 'graphic tee', 'cottagecore'], 'size': 'S/M', 'condition': 'excellent', 'price': 18.0, 'colors': ['white', 'pink', 'purple'], 'brand': None, 'platform': 'depop'}, {'id': 'lst_006', 'title': 'Graphic Tee — 2003 Tour Bootleg Style', 'description': 'Vintage-style bootleg tee with faded graphic. Slightly boxy fit. 100% cotton, soft and worn-in.', 'category': 'tops', 'style_tags': ['graphic tee', 'vintage', 'grunge', 'streetwear', 'band tee'], 'size': 'L', 'condition': 'good', 'price': 24.0, 'colors': ['black'], 'brand': None, 'platform': 'depop'}, {'id': 'lst_017', 'title': 'Mesh Long-Sleeve Top — Black', 'description': 'Sheer black mesh long-sleeve. Great for layering under a graphic tee or over a bralette. Stretchy material, fits true to size.', 'category': 'tops', 'style_tags': ['y2k', 'grunge', 'goth', 'layering'], 'size': 'S/M', 'condition': 'excellent', 'price': 15.0, 'colors': ['black'], 'brand': None, 'platform': 'depop'}, {'id': 'lst_033', 'title': 'Vintage Band Tee — Faded Grey', 'description': 'Faded grey band-style tee with distressed graphic. Crew neck. Fits boxy. Well-loved but no holes or major damage.', 'category': 'tops', 'style_tags': ['vintage', 'grunge', 'band tee', 'graphic tee', 'streetwear'], 'size': 'L', 'condition': 'fair', 'price': 19.0, 'colors': ['grey', 'charcoal'], 'brand': None, 'platform': 'depop'}, {'id': 'lst_011', 'title': 'Low-Rise Cargo Pants — Khaki', 'description': 'Y2K era low-rise cargo pants. Lots of pockets. Khaki color, slightly distressed at the hems. Great for layering with a long tee.', 'category': 'bottoms', 'style_tags': ['y2k', 'cargo', '2000s', 'streetwear'], 'size': 'W29', 'condition': 'fair', 'price': 27.0, 'colors': ['khaki', 'tan'], 'brand': None, 'platform': 'poshmark'}, {'id': 'lst_015', 'title': 'Vintage Graphic Hoodie — Faded Black', 'description': 'Faded black pullover hoodie with barely-visible vintage graphic on the chest. Cozy interior. Some pilling but adds to the worn-in look.', 'category': 'tops', 'style_tags': ['vintage', 'grunge', 'graphic', 'streetwear'], 'size': 'L', 'condition': 'fair', 'price': 26.0, 'colors': ['black', 'charcoal'], 'brand': None, 'platform': 'depop'}]
+```
 
 ```
 $ python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[0], get_example_wardrobe()))"
-
-```
 
 Here are two wearable, everyday outfits centered around your new Vintage Levi's 501 Jeans:
 
@@ -204,13 +202,15 @@ _Leaning into the 90s vintage roots of the 501s, this outfit pairs classic denim
   - **Black cropped zip hoodie** (`w_005`) worn zipped up to create a sharp contrast against the medium-wash denim.
   - **Brown leather belt** (`w_009`) threaded through the loops to add a classic touch and break up the black and blue.
   - **Black combat boots** (`w_008`) to give the straight-leg hem a tougher, grounded finish.
+```
 
 ```
 $ python -c "from tools import create_fit_card; from utils.data_loader import load_listings; print(create_fit_card('jeans and white sneakers', load_listings()[0]))"
 
+Scored these Vintage Levi's 501 Jeans for just $38 on Depop, and they honestly have the absolute best faded wash. I styled them with a simple white tee and crisp sneakers for that effortless, off-duty model street style. Let me know if you're living for this effortless casual fit as much as I am!
 ```
 
-## Scored these Vintage Levi's 501 Jeans for just $38 on Depop, and they honestly have the absolute best faded wash. I styled them with a simple white tee and crisp sneakers for that effortless, off-duty model street style. Let me know if you're living for this effortless casual fit as much as I am!
+---
 
 ## How I Used AI
 
@@ -223,15 +223,15 @@ $ python -c "from tools import create_fit_card; from utils.data_loader import lo
 
 **Moment 1**
 
-- _What I asked for:_
-- _What came back:_
-- _What I changed:_
+- _What I asked for:_ I gave Claude my five criteria and asked, "Could someone check this without asking me what I meant?" I also asked it to fix the wording and to check whether each "Why this target" explained the number.
+- _What came back:_ It said criterion 4 ("the same caption every time, because temperature is 0 and the cache is on") could never fail, and that `tools.py` treats identical captions as a bug. It also said criterion 3 ("the agent reads the session state") wasn't something a checker could see, and that my reasons described what happens rather than why I picked that number.
+- _What I changed:_ I rewrote criterion 4 to check content instead of exact words (the caption mentions the item, its price and its platform, in at least 4 of 5 tries). The rewrite also added a 2-to-4-sentence length rule, which I removed because my own Tool Inventory never defines a length. I changed criterion 3 to compare what the trace shows each tool received against `session["selected_item"]` and `session["outfit_suggestion"]`.
 
 **Moment 2**
 
-- _What I asked for:_
-- _What came back:_
-- _What I changed:_
+- _What I asked for:_ I asked Claude to help me write the code for my tools, especially the prompts inside `suggest_outfit` and `create_fit_card`.
+- _What came back:_ Claude pointed out edge cases my code didn't handle and a gap in my prompt. `suggest_outfit` would crash if the wardrobe was missing or had no `items` key, and `create_fit_card` would still call the model with an empty or blank outfit. My wardrobe prompt also didn't stop the model from suggesting pieces the user doesn't own.
+- _What I changed:_ In `suggest_outfit`, I added a check that treats a missing wardrobe or a missing `items` key as an empty wardrobe instead of crashing. In `create_fit_card`, I added a guard (`if not outfit.strip()`) that returns a descriptive message instead of calling the model. In the wardrobe prompt, I added "Do not claim the user owns anything that is not listed."
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
