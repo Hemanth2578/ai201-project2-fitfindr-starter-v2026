@@ -195,9 +195,14 @@ def run_agent(query: str, wardrobe: dict) -> dict:
 
         steps += 1
         trace.check_iterations(steps)
+        # print("DEBUG outfit passed to create_fit_card:", repr(session["outfit_suggestion"])[:120])
+        # print("DEBUG item passed to create_fit_card:  ", session["selected_item"]["id"])
+
         session["fit_card"] = create_fit_card(
             session["outfit_suggestion"], session["selected_item"]
         )
+        # print("DEBUG outfit still matches session:", session["outfit_suggestion"] is not None)
+
         trace.step(
             "create_fit_card",
             inputs=session["selected_item"],

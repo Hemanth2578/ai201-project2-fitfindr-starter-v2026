@@ -109,8 +109,10 @@ If `search_listings` returns an empty list, put a message in `session["error"]` 
 **Where it lives:** `agent.py::run_agent`
 
 **How the query is parsed:** <!-- regex, string splitting, or asking the model — say which -->
+The query is parsed with regex because it gives the same output every time it runs. The downside is that it misses phrasings it has never seen: for example, "nothing over thirty dollars" parses to no price at all.
 
 **What moves through the session:** <!-- which fields, in what order -->
+The session fills these fields in order: the parsed query goes into `parsed`, and the matching listings go into `search_results`. If there are no results, a message saying what the user could change is stored in `error`, and `selected_item`, `outfit_suggestion` and `fit_card` stay `None`. Otherwise, the first result is stored in `selected_item`. That item and the `wardrobe` are used to get an outfit suggestion, which is stored in `outfit_suggestion`. The outfit suggestion and `selected_item` are then used to create a short caption, which is stored in `fit_card`.
 
 ---
 
