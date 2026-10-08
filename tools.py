@@ -53,8 +53,17 @@ def _size_matches(wanted: str, listing_size: str) -> bool:
         return True
     return bool(_size_tokens(wanted) & listing_tokens)
 
-def _score_listing(listing: dict, keywords: set[str]) -> int:
-    """Count how many keywords appear in the listing discription, title, category, colors, style_tags, brand and condition."""
+def _color_words(listings: list[dict]) -> set[str]:
+    """Every word used in a listing's colors ("navy", "black", "dark", "blue", …)."""
+    return {word for listing in listings for color in listing.get("colors", []) for word in _keywords(color)}
+
+def _score_listing(listing: dict, keywords: set[str], item_words: set[str]) -> int:
+    """Count how many keywords appear in the listing discription, title, category, colors, style_tags, brand and condition.
+
+    A color alone can't make a match: if the query names anything besides
+    colors (`item_words`), the listing has to match at least one of those.
+    Otherwise "WWII Navy Peacoat" matches a navy sweatshirt on "navy" alone.
+    """
     listing_keywords = _keywords(listing.get("description", ""))
     listing_keywords |= _keywords(listing.get("title", ""))
     listing_keywords |= _keywords(listing.get("category", ""))
@@ -62,6 +71,8 @@ def _score_listing(listing: dict, keywords: set[str]) -> int:
     listing_keywords |= _keywords(",".join(listing.get("style_tags", [])))
     listing_keywords |= _keywords(listing.get("brand", ""))
     listing_keywords |= _keywords(listing.get("condition", ""))
+    if item_words and not (item_words & listing_keywords):
+        return 0
     return len(keywords & listing_keywords)
 
 def search_listings(
@@ -118,9 +129,10 @@ def search_listings(
     # TODO: replace this with your implementation
     listings = load_listings()
     parsed_keywords = _keywords(description)
+    item_words = parsed_keywords - _color_words(listings)  # the words that name the item, not its color
     size_price_filter = lambda x: (not size or _size_matches(size, x['size'])) and (not max_price or x['price'] <= abs(max_price))
     filtered_listings = list(filter(size_price_filter, listings))
-    scored_listings = [(listing, _score_listing(listing, parsed_keywords)) for listing in filtered_listings]
+    scored_listings = [(listing, _score_listing(listing, parsed_keywords, item_words)) for listing in filtered_listings]
     scored_listings = [listing for listing in scored_listings if listing[1]>0]
     scored_listings.sort(key=lambda x: x[1], reverse=True)
     matching_listings = [listing[0] for listing in scored_listings][:config.SEARCH_RESULT_LIMIT]

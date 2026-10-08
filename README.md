@@ -528,22 +528,53 @@ What the service said: The model rejected your API key. Check GEMINI_API_KEY in 
 
 **What I changed:**
 
+One change, in the search tool (`tools.py::search_listings` and `tools.py::_score_listing`). A color word can no longer make a match on its own. The search now splits the query's keywords into color words (every word used in the listings' `colors` field, such as "navy" or "black") and item words (everything else, such as "peacoat" or "boots"). If the query has any item words, a listing must match at least one of them, or it scores 0 and is dropped. A query made only of colors, like "black", works as before. Scoring and ranking are otherwise unchanged.
+
+Two other edits happened between the before and after runs, and neither changes what the agent does. For the criterion 3 revision, I added the item's `id` to the trace notes for `suggest_outfit` and `create_fit_card` in `agent.py::run_agent`. I also added two diagnostic scenarios to `scenarios.py`.
+
 **Which failure it was meant to fix:**
+
+The wrong-item search from my Milestone 4 diagnosis. The step was the tool (`search_listings`), and the mechanism was keyword scoring that counted a color as a full match. "WWII Navy Peacoat Size XL under $50" returned an Oversized Crewneck Sweatshirt because "navy" was the only word that matched, and "black boots under $60" ranked an Oversized Flannel Shirt first because it matched "black". The agent then styled and captioned an item the user never asked for.
 
 ### Run Log — After
 
+Run: `python run_eval.py --label after`, caching off, temperature 0.9. Full output is in `results/run_2026-10-08_1813_after.md`. Same scenarios and queries as the before run, plus two diagnostics.
+
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 | --------- | ------ | ----- | ----- | ----- | ----- | ----- | ------- |
-| 1.        |        |       |       |       |       |       |         |
-| 2.        |        |       |       |       |       |       |         |
-| 3.        |        |       |       |       |       |       |         |
-| 4.        |        |       |       |       |       |       |         |
-| 5.        |        |       |       |       |       |       |         |
+| 1. A matching query completes all three tools and returns a fit card | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. An impossible query stops before `suggest_outfit` and names what to change | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. (revised) The trace logs the `id` of the item passed to `suggest_outfit` and `create_fit_card`, both equal `selected_item`'s `id`, and the outfit matches the session | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. The fit card for the same item mentions the item, its price and its platform | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 5. `suggest_outfit` names owned pieces with the example wardrobe and gives general advice with an empty one | 4 of 5 for each wardrobe | PASS | PASS | PASS | PASS | PASS | MET (5/5 example, 5/5 empty) |
+
+How I scored the after run:
+
+- **Criterion 1:** every try selected *Y2K Baby Tee — Butterfly Print* and returned a fit card.
+- **Criterion 2:** every trace ended at `branch` with no `suggest_outfit` step, and the error listed things to change.
+- **Criterion 3:** in every try, both trace steps showed `item id=lst_004`, which is the `id` of `selected_item` (*90s Track Jacket — Navy/White Stripe*). The `create_fit_card` input began with the same text as `outfit_suggestion`. This is the first run where the `id` could be checked directly. The outfit is still compared by its start, because the trace cuts long values off at about 110 characters.
+- **Criterion 4:** every caption mentioned Levi's 501, "$38" and "Depop".
+- **Criterion 5:** with the example wardrobe, every suggestion named owned pieces by ID (such as `w_003`, `w_007`). With the empty wardrobe, none named a wardrobe ID or said the user owned anything.
+
+**Diagnostics: the failure the change was meant to fix**
+
+These two queries aren't part of my five criteria. They're the wrong-item searches from my diagnosis. The before run didn't include them, so their "before" comes from running the old search on the same queries. Search doesn't call the model, so it returns the same result every time.
+
+| Query | Before the change | After the change (5 of 5 tries) |
+| ----- | ----------------- | ------------------------------- |
+| `WWII Navy Peacoat Size XL under $50` | 1 result: *Oversized Crewneck Sweatshirt — Vintage Navy*, matched only on "navy". The agent styled a sweatshirt for someone who asked for a peacoat. | 0 results. The agent stopped at the branch: "Nothing in the listings matched description 'WWII Navy Peacoat', size XL, under $50. Things to change: try broader words — 'jacket' finds more than 'cropped corduroy jacket'; drop the size, or try a neighbouring one; raise the price ceiling above $50." |
+| `black boots under $60` | 9 results, top: *Oversized Flannel Shirt — Plaid Red/Black*, matched only on "black". | 1 result: *Suede Chelsea Boots — Tan* ($44, poshmark), the only boots in the listings. All three tools ran in every try. The boots are tan, not black, because no black boots are listed. |
 
 **Did it help, and how do I know:**
 
 <!-- If it made things worse, say that. Honestly reported, that earns full
      credit and is more interesting than one that worked. -->
+
+Yes, for the failure it targeted, and it didn't break anything else.
+
+- **The diagnostics show the fix.** The peacoat query now stops at the branch with a message saying what to change, instead of styling a sweatshirt. The black boots query now returns the only boots in the listings instead of a flannel shirt. Both held in 5 of 5 tries.
+- **My five criteria didn't change.** All five were MET 5/5 before and 5/5 after, with the same item selected for criteria 1, 3, 4 and 5. One query returned fewer results: the criterion 3 query went from 10 matches to 4, because listings that only matched "black" or "white" were dropped. The top result stayed the same.
+- **What the criteria can't show.** Because all five passed before the change, they couldn't show any improvement. None of them checks whether the search returned the kind of item the user asked for, which is the gap I named in my diagnosis. The diagnostics are the evidence, not the criteria table.
 
 ---
 
@@ -552,6 +583,15 @@ What the service said: The model rejected your API key. Check GEMINI_API_KEY in 
 <!-- For each criterion still missed: what you'd do, and why you stopped where
      you did. "I ran out of time" is fine if it's true. Pretending nothing is
      left is not. -->
+
+No criterion is still missed, since all five were MET in both runs. These problems are still there:
+
+1. **The fix only covers colors.** Other descriptive words can still make a match on their own. I checked after the change: "vintage peacoat" returns *Vintage Levi's 501 Jeans*, and "oversized peacoat under $50" returns *Oversized Flannel Shirt*, because "vintage" and "oversized" aren't colors. The same rule would need to cover descriptive words like these (style words, fits, conditions). I stopped at colors to keep this to one change I could measure.
+2. **No criterion checks search relevance.** Criterion 1 passes as long as a fit card comes back, even for the wrong item. I'd tighten it so the selected item has to be the type of item the query names, and add the peacoat and boots queries to it.
+3. **A requested color that isn't available is ignored without a word.** "black boots" returns tan boots, because they're the only boots listed. That's better than a shirt, but the user isn't told the color didn't match. I'd add a note like "No black boots — the closest is tan."
+4. **The model-unavailable message gives the wrong fix for an outage.** On a 503 "high demand" error, it still says to check `GEMINI_API_KEY`, and it says the outfit step didn't run even when `suggest_outfit` had succeeded (see Failure tests). I'd check the cause and which step failed before writing the message.
+5. **Prices written in words are ignored.** The regex parser misses phrasings like "nothing over fifty dollars", so the price ceiling quietly drops off and the words become part of the search.
+6. **The trace shortens the outfit to about 110 characters**, so criterion 3 can only compare the start of the outfit text, not the whole thing.
 
 <!-- ═════════════════════════════════════════════════════════════════════
 

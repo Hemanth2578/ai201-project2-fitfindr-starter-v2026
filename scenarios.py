@@ -79,6 +79,23 @@ SCENARIOS = [
         "wardrobe": "empty",
         "criterion": 5,
     },
+    {
+        # Diagnostic for the Milestone 5 fix. No peacoat is listed, so this
+        # should stop at the branch. Before the fix, "navy" alone matched a
+        # navy sweatshirt.
+        "name": "wrong item: peacoat query",
+        "query": "WWII Navy Peacoat Size XL under $50",
+        "wardrobe": "example",
+        "criterion": None,
+    },
+    {
+        # Diagnostic for the Milestone 5 fix. The only boots are tan Chelsea
+        # boots. Before the fix, "black" alone ranked a flannel shirt first.
+        "name": "wrong item: black boots query",
+        "query": "black boots under $60",
+        "wardrobe": "example",
+        "criterion": None,
+    },
 ]
 
 WARDROBES = ("example", "empty")
