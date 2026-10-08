@@ -47,6 +47,38 @@ SCENARIOS = [
     # For a fit-card criterion, you probably want the SAME query listed more
     # than once, or several different items, depending on what your criterion
     # actually says.
+    {
+        # A matching query that runs all three tools. Criterion 3 — the trace
+        # inputs for suggest_outfit and create_fit_card should match the session.
+        "name": "State: trace inputs match the session",
+        "query": "Chrome hearts black jacket with white embroidered text under $1000",
+        "wardrobe": "example",
+        "criterion": 3,
+    },
+    {
+        # The same item on every try. Criterion 4 — each fit card should
+        # mention the item, its price and its platform.
+        "name": "Fit card for the same item mentions the item, price and platform",
+        "query": "Denim Jeans with grey color under $100",
+        "wardrobe": "example",
+        "criterion": 4,
+    },
+    {
+        # A matching query with the example wardrobe. Criterion 5 — the
+        # suggestion should name pieces the user actually owns.
+        "name": "suggest_outfit names owned pieces (example wardrobe)",
+        "query": "cargo pants under $40",
+        "wardrobe": "example",
+        "criterion": 5,
+    },
+    {
+        # The same query with an empty wardrobe. Criterion 5 — the suggestion
+        # should give general styling advice without naming any owned pieces.
+        "name": "suggest_outfit gives general advice (empty wardrobe)",
+        "query": "cargo pants under $40",
+        "wardrobe": "empty",
+        "criterion": 5,
+    },
 ]
 
 WARDROBES = ("example", "empty")

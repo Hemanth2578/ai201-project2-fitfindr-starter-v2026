@@ -198,8 +198,10 @@ def run_agent(query: str, wardrobe: dict) -> dict:
 
         steps += 1
         trace.check_iterations(steps)
-        # print("DEBUG outfit passed to create_fit_card:", repr(session["outfit_suggestion"])[:120])
-        # print("DEBUG item passed to create_fit_card:  ", session["selected_item"]["id"])
+        # Criteria 4 and 5 are about the fit card. The trace inputs for create_fit_card
+        # should match the session, and the fit card should mention the item,
+        print("DEBUG outfit passed to create_fit_card:", repr(session["outfit_suggestion"])[:120])
+        print("DEBUG item passed to create_fit_card:  ", session["selected_item"]["id"])
 
         session["fit_card"] = create_fit_card(
             session["outfit_suggestion"], session["selected_item"]
@@ -210,7 +212,8 @@ def run_agent(query: str, wardrobe: dict) -> dict:
             returned=session["fit_card"],
             note=f"{len(session['wardrobe'].get('items') or [])} wardrobe item(s)",
         )
-        # print("DEBUG outfit still matches session:", session["outfit_suggestion"] is not None)
+        # criteria 3 is about the trace inputs for suggest_outfit and create_fit_card matching the session, so we can check that here.
+        print("DEBUG outfit still matches session:", session["outfit_suggestion"] is not None)
 
         
 

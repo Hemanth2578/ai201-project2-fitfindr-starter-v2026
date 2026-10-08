@@ -251,19 +251,104 @@ Scored these Vintage Levi's 501 Jeans for just $38 on Depop, and they honestly h
      `python run_eval.py --label before` runs everything and writes the table
      into results/. Paste it here and fill in the verdicts. -->
 
-| Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
-| --------- | ------ | ----- | ----- | ----- | ----- | ----- | ------- |
-| 1.        |        |       |       |       |       |       |         |
-| 2.        |        |       |       |       |       |       |         |
-| 3.        |        |       |       |       |       |       |         |
-| 4.        |        |       |       |       |       |       |         |
-| 5.        |        |       |       |       |       |       |         |
+Run: `python run_eval.py --label before`, caching off, temperature 0.9. Full output is in `results/run_2026-10-08_1729_before.md`.
 
-**Real output from one try**, pasted as text, naming the file and function
-that produced it:
+| Criterion                                                                                                   | Target                   | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict                      |
+| ----------------------------------------------------------------------------------------------------------- | ------------------------ | ----- | ----- | ----- | ----- | ----- | ---------------------------- |
+| 1. A matching query completes all three tools and returns a fit card                                        | 4 of 5                   | PASS  | PASS  | PASS  | PASS  | PASS  | MET (5/5)                    |
+| 2. An impossible query stops before `suggest_outfit` and names what to change                               | 5 of 5                   | PASS  | PASS  | PASS  | PASS  | PASS  | MET (5/5)                    |
+| 3. The trace shows the session's item and outfit reached the next tools                                     | 5 of 5                   | PASS  | PASS  | PASS  | PASS  | PASS  | MET (5/5)                    |
+| 4. The fit card for the same item mentions the item, its price and its platform                             | 4 of 5                   | PASS  | PASS  | PASS  | PASS  | PASS  | MET (5/5)                    |
+| 5. `suggest_outfit` names owned pieces with the example wardrobe and gives general advice with an empty one | 4 of 5 for each wardrobe | PASS  | PASS  | PASS  | PASS  | PASS  | MET (5/5 example, 5/5 empty) |
+
+How I scored each try:
+
+- **Criterion 1** (`"vintage graphic tee under $30"`): PASS if the session has a `fit_card`. All five returned one for _Y2K Baby Tee — Butterfly Print_.
+- **Criterion 2** (`"designer ballgown size XXS under $5"`): PASS if the trace ends at `branch` with no `suggest_outfit` step, and the error message lists things to change. All five did.
+- **Criterion 3** (`"Chrome hearts black jacket with white embroidered text under $1000"`): PASS if the `suggest_outfit` input in the trace is the same item as `selected_item`, and the `create_fit_card` input starts with the same text as `outfit_suggestion`. The trace shortens long values to about 110 characters, so I compared the item's title and the start of the outfit text, not the full `id` and the full outfit.
+- **Criterion 4** (`"Denim Jeans with grey color under $100"`): PASS if the caption mentions "Levi's 501", "$38" and "Depop". All five did.
+- **Criterion 5** (`"cargo pants under $40"`): PASS for a try only if both wardrobes passed. With the example wardrobe, every suggestion named at least one owned piece. Four used IDs like `w_003`, and Try 2 named them by name ("White ribbed tank top", "Black cropped zip hoodie"). With the empty wardrobe, no suggestion named a wardrobe ID or said the user owned anything; all five gave general advice ("using everyday wardrobe basics").
+
+**Real output from one try per criterion**, from `results/run_2026-10-08_1729_before.md`. The loop is `agent.py::run_agent` and the tools are in `tools.py`.
+
+Criterion 1, Try 1: fit card from `tools.py::create_fit_card`
 
 ```
+- stopped early: no
+- selected_item: Y2K Baby Tee — Butterfly Print ($18.0, depop)
+- search_results: 10
 
+Fit card:
+Obsessed is an understatement for this Y2K butterfly baby tee I just scored on Depop for only $18! I'm leaning all the way into that cottagecore-meets-grunge aesthetic by styling it with edgy combat boots and wide-leg trousers for the ultimate contrast. Which vibe are we feeling more today—streetwear casual or vintage grunge? 🦋✨
+```
+
+Criterion 2, Try 1: the branch in `agent.py::run_agent`, message from `agent.py::_nothing_found_message`
+
+```
+- stopped early: yes — Nothing in the listings matched description 'designer ballgown', size XXS, under $5.
+Things to change: try broader words — 'jacket' finds more than 'cropped corduroy jacket'; drop the size, or try a neighbouring one; raise the price ceiling above $5.
+- selected_item: (none)
+- search_results: 0
+
+[1] parse_query
+      in:  designer ballgown size XXS under $5
+      out: dict with keys: description, size, max_price
+      →    description= 'designer ballgown' / Size = XXS / max_price = 5.0
+[2] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: [] (empty)
+      →    0 match(es)
+[3] branch
+      →    search returned []: stopping before suggest_outfit
+```
+
+Criterion 3, Try 1: trace from `agent.py::run_agent` (`trace.step` calls), compared with the session
+
+```
+- selected_item: 90s Track Jacket — Navy/White Stripe ($45.0, poshmark)
+
+[3] select_item
+      out: 90s Track Jacket — Navy/White Stripe ($45.0, poshmark)
+[4] suggest_outfit
+      in:  90s Track Jacket — Navy/White Stripe ($45.0, poshmark)
+[5] create_fit_card
+      in:  ('Here is a wearable, everyday outfit styled around your new 90s Champion track jacket, utilizing pieces strai…
+
+Outfit suggestion (session["outfit_suggestion"]) begins:
+Here is a wearable, everyday outfit styled around your new 90s Champion track jacket, utilizing pieces strai...
+```
+
+Criterion 4, Try 1: fit card from `tools.py::create_fit_card`
+
+```
+- selected_item: Vintage Levi's 501 Jeans — Medium Wash ($38.0, depop)
+
+Fit card:
+Score! Just scored these Vintage Levi's 501 Jeans for only $38 on Depop, and they seriously have the best medium-wash fade. I styled them two ways—keep it cozy with an oversized crewneck for effortless streetwear vibes, or lean into an edgy double-denim look with a cropped hoodie and combat boots. Which fit are you rocking?
+```
+
+Criterion 5, Try 2: outfit suggestions from `tools.py::suggest_outfit`
+
+```
+Example wardrobe (first outfit):
+Here are two wearable outfits centered around your new Y2K low-rise khaki cargo pants, using pieces straight from your wardrobe:
+
+### Outfit 1: Y2K Streetwear Edge
+* **Thrifted Item:** Low-Rise Cargo Pants — Khaki
+* **Wardrobe Pieces:**
+  * **White ribbed tank top** (Tucked in to highlight the low-rise waistline)
+  * **Black cropped zip hoodie** (Layered open over the tank for an authentic Y2K proportion play)
+  * **Chunky white sneakers** (To anchor the streetwear aesthetic)
+  * **Black crossbody bag** (For an easy, hands-free everyday accessory)
+
+Empty wardrobe:
+Here are two wearable ways to style these low-rise khaki cargo pants using everyday wardrobe basics:
+
+**1. Casual Streetwear (Balanced Proportions)**
+Since low-rise cargos have a relaxed, Y2K-inspired silhouette, balance the volume by pairing them with a fitted basic black or white ribbed tank top. Add a simple leather belt and a pair of classic white sneakers to keep the look clean, comfortable, and grounded.
+
+**2. Effortless Layering**
+Embrace the 2000s aesthetic mentioned in the description by layering a boxy, oversized graphic t-shirt or a simple heather gray crewneck sweatshirt over a contrasting long-sleeve tee. Let the hem peek out and finish the outfit with chunky sneakers or retro trainers.
 ```
 
 ---
