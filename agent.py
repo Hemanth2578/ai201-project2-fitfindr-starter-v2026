@@ -117,6 +117,8 @@ def _search(parsed: dict) -> list[dict]:
         )
         return results or []
     except Exception:  # noqa: BLE001 — MCP unavailable is not a user-facing error
+        print(
+            "MCP server not available, falling back to direct call. ")
         return search_listings(
             parsed["description"], parsed["size"], parsed["max_price"]
         )
@@ -154,11 +156,12 @@ def run_agent(query: str, wardrobe: dict) -> dict:
         trace.check_iterations(steps)
         parsed = parse_query(query)
         session["parsed"] = parsed
-        trace.step("parse_query", inputs=query, returned=parsed)
+        trace.step("parse_query", inputs=query, returned=parsed, note=f"description= {parsed['description']!r} / Size = {parsed['size']} / max_price = {parsed['max_price']}")
 
         steps += 1
         trace.check_iterations(steps)
         results = _search(parsed)
+        # trace.step("search_listings (via MCP)", inputs=parsed, returned=results, note=f"{len(results)} match(es)")
         session["search_results"] = results
         trace.step(
             "search_listings (via MCP)",

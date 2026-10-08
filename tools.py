@@ -54,8 +54,14 @@ def _size_matches(wanted: str, listing_size: str) -> bool:
     return bool(_size_tokens(wanted) & listing_tokens)
 
 def _score_listing(listing: dict, keywords: set[str]) -> int:
-    """Count how many keywords appear in the listing discription"""
+    """Count how many keywords appear in the listing discription, title, category, colors, style_tags, brand and condition."""
     listing_keywords = _keywords(listing.get("description", ""))
+    listing_keywords |= _keywords(listing.get("title", ""))
+    listing_keywords |= _keywords(listing.get("category", ""))
+    listing_keywords |= _keywords(",".join(listing.get("colors", [])))
+    listing_keywords |= _keywords(",".join(listing.get("style_tags", [])))
+    listing_keywords |= _keywords(listing.get("brand", ""))
+    listing_keywords |= _keywords(listing.get("condition", ""))
     return len(keywords & listing_keywords)
 
 def search_listings(
