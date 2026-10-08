@@ -233,6 +233,24 @@ Scored these Vintage Levi's 501 Jeans for just $38 on Depop, and they honestly h
 - _What came back:_ Claude pointed out edge cases my code didn't handle and a gap in my prompt. `suggest_outfit` would crash if the wardrobe was missing or had no `items` key, and `create_fit_card` would still call the model with an empty or blank outfit. My wardrobe prompt also didn't stop the model from suggesting pieces the user doesn't own.
 - _What I changed:_ In `suggest_outfit`, I added a check that treats a missing wardrobe or a missing `items` key as an empty wardrobe instead of crashing. In `create_fit_card`, I added a guard (`if not outfit.strip()`) that returns a descriptive message instead of calling the model. In the wardrobe prompt, I added "Do not claim the user owns anything that is not listed."
 
+**Moment 3 (unit 4): test queries for my scenarios**
+
+- _What I asked for:_ I asked Claude for good queries to test criterion 5 in `scenarios.py`, and to check the scenarios I had written.
+- _What came back:_ It ran each query through my search and found that both of my criterion 5 scenarios used the impossible query "designer ballgown size XXS under $5". The search returned nothing, so the agent stopped before `suggest_outfit`, and the tool criterion 5 tests would never have run. It suggested "cargo pants under $40", which matches one clear item and pairs with pieces in my wardrobe, and it warned me off "black boots under $60" because that query returned a flannel shirt.
+- _What I changed:_ I switched both criterion 5 scenarios (example and empty wardrobe) to "cargo pants under $40" and gave them names that say which wardrobe each one uses.
+
+**Moment 4 (unit 4): the search fix**
+
+- _What I asked for:_ I asked Claude to help fix the wrong-item search from my diagnosis, where "WWII Navy Peacoat" returned a sweatshirt.
+- _What came back:_ It found the cause: a color word alone counted as a match, so "navy" was enough. It offered two fixes, tightening the search or adding a second branch to the loop, and wrote the code for the first one, which makes a listing match at least one non-color word from the query. It also checked that every criterion query still selected the same item.
+- _What I changed:_ I picked the search fix over the second branch because it fixes the cause inside the tool, and I added the peacoat and black boots queries as diagnostic scenarios so I could measure it. After the change I tested more queries and found the fix only covers colors: "vintage peacoat" still returns jeans. I listed that under What's Still Broken instead of claiming the search was fixed.
+
+**Moment 5 (unit 4): scoring the runs and writing them up**
+
+- _What I asked for:_ After running `run_eval.py` before and after, I asked Claude to fill in the run log tables and draft the README text from the results files.
+- _What came back:_ It marked each try PASS or FAIL against my criteria, and pointed out that criterion 3 couldn't be scored as written, because it compares the item's `id` but my trace only showed the title. While adding the `id` to the trace, it also removed my DEBUG print statements.
+- _What I changed:_ I revised criterion 3 in `criteria.md` to check the `id`, keeping the original line, and had the `id` added to the trace notes so the after run could score it. I asked for the DEBUG prints to be put back because I use them to check what reaches `create_fit_card`. I read the drafted text against my results before keeping it.
+
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
      Don't fill these in during unit 3.
