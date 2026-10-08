@@ -189,17 +189,20 @@ def run_agent(query: str, wardrobe: dict) -> dict:
         session["outfit_suggestion"] = suggest_outfit(
             session["selected_item"], session["wardrobe"]
         )
+        # The item id goes in the note so criterion 3 can compare it with
+        # session["selected_item"]["id"] — the title alone isn't unique.
         trace.step(
             "suggest_outfit",
             inputs=session["selected_item"],
             returned=session["outfit_suggestion"],
-            note=f"{len(session['wardrobe'].get('items') or [])} wardrobe item(s)",
+            note=(
+                f"item id={session['selected_item']['id']} · "
+                f"{len(session['wardrobe'].get('items') or [])} wardrobe item(s)"
+            ),
         )
 
         steps += 1
         trace.check_iterations(steps)
-        # Criteria 4 and 5 are about the fit card. The trace inputs for create_fit_card
-        # should match the session, and the fit card should mention the item,
         print("DEBUG outfit passed to create_fit_card:", repr(session["outfit_suggestion"])[:120])
         print("DEBUG item passed to create_fit_card:  ", session["selected_item"]["id"])
 
@@ -208,14 +211,12 @@ def run_agent(query: str, wardrobe: dict) -> dict:
         )
         trace.step(
             "create_fit_card",
-            inputs=(session["outfit_suggestion"], session["selected_item"]),
+            inputs=session["outfit_suggestion"],
             returned=session["fit_card"],
-            note=f"{len(session['wardrobe'].get('items') or [])} wardrobe item(s)",
+            note=f"item id={session['selected_item']['id']}",
         )
-        # criteria 3 is about the trace inputs for suggest_outfit and create_fit_card matching the session, so we can check that here.
         print("DEBUG outfit still matches session:", session["outfit_suggestion"] is not None)
 
-        
 
     except ModelUnavailable as exc:
         session["error"] = (

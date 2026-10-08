@@ -373,13 +373,17 @@ Embrace the 2000s aesthetic mentioned in the description by layering a boxy, ove
 
 | #   | Criterion | Target | Verdict | How I decided |
 | --- | --------- | ------ | ------- | ------------- |
-| 1   |           |        |         |               |
-| 2   |           |        |         |               |
-| 3   |           |        |         |               |
-| 4   |           |        |         |               |
-| 5   |           |        |         |               |
+| 1   | A matching query completes all three tools and returns a fit card | 4 of 5 | MET (5/5) | All five tries of "vintage graphic tee under $30" ran `search_listings`, `suggest_outfit` and `create_fit_card` and ended with a fit card in the session. 5 passes is at least 4, so the target held. |
+| 2   | An impossible query stops before `suggest_outfit` and names what to change | 5 of 5 | MET (5/5) | In all five tries of "designer ballgown size XXS under $5", the trace ended at `branch` with no `suggest_outfit` step, `fit_card` stayed `None`, and the error listed three things to change. The target needed all five, and all five passed. |
+| 3   | The trace shows the item and outfit from the session reached the next tools | 5 of 5 | MET (5/5) | In all five tries, the `suggest_outfit` input in the trace was the same item as `selected_item`, and the `create_fit_card` input began with the same text as `outfit_suggestion`. I compared titles and the start of the outfit, because the trace never shows the item's `id` and cuts long values off at about 110 characters. |
+| 4   | The fit card for the same item mentions the item, its price and its platform | 4 of 5 | MET (5/5) | All five captions for the Vintage Levi's 501 Jeans named the jeans, "$38" and "Depop". 5 passes is at least 4. |
+| 5   | `suggest_outfit` names owned pieces with the example wardrobe and gives general advice with an empty one | 4 of 5 for each wardrobe | MET (5/5 and 5/5) | With the example wardrobe, all five suggestions for the cargo pants named at least one owned piece (four by ID such as `w_003`, one by name). With the empty wardrobe, all five gave general advice and none named a wardrobe ID or claimed the user owned anything. Both wardrobes passed 5 of 5. |
 
 **Diagnoses**
+
+I missed nothing: all five criteria passed in all five tries. Looking back, my targets were on the easy side. They check that each path through the agent works (a full run, the empty-search branch, the session state, the fit card and the empty wardrobe), but none of them checks whether the search returned the kind of item the user asked for. I saw that go wrong outside the test run. "WWII Navy Peacoat Size XL under $50" returned an Oversized Crewneck Sweatshirt, because the only word it matched was "navy". Criterion 1 still counts a run like that as a pass, since it only checks that a fit card came back. That's the criterion I would tighten: the selected item should also be the type of item the query asked for (a peacoat request should return a coat or jacket, not a sweatshirt).
+
+I'm also revising criterion 3 in `criteria.md`, because it couldn't be measured as written. It says the item `suggest_outfit` received has the same `id` as `session["selected_item"]`, but my trace only shows the item's title and price, never its `id`. I scored it by comparing titles instead, so the revision makes the trace log the `id` and compares that.
 
 ---
 

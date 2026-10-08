@@ -66,6 +66,10 @@ Given a query that matches at least one listing, the trace shows that the item `
 
 I picked 5 of 5 because each tool reads its input from the session state, so what is stored and what is passed should never differ. Tracing each tool's inputs lets me confirm the correct value reached it; any mismatch means a bug in how my loop stores or reads the session.
 
+> **Revised in unit 4:** Given a query that matches at least one listing, the trace logs the `id` of the item passed to `suggest_outfit` and to `create_fit_card`, and both equal `session["selected_item"]["id"]`; and the outfit `create_fit_card` received is identical to `session["outfit_suggestion"]` — in 5 of 5 tries.
+>
+> **Why revised:** The original said the trace shows the same `id`, but my trace only logs each item's title and price, never its `id`. I had to compare titles instead, and two different listings could share a title. Logging the `id` makes the criterion checkable the way it was written.
+
 ---
 
 ## 4. Something about the fit card
