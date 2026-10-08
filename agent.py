@@ -204,13 +204,15 @@ def run_agent(query: str, wardrobe: dict) -> dict:
         session["fit_card"] = create_fit_card(
             session["outfit_suggestion"], session["selected_item"]
         )
-        # print("DEBUG outfit still matches session:", session["outfit_suggestion"] is not None)
-
         trace.step(
             "create_fit_card",
-            inputs=session["selected_item"],
+            inputs=(session["outfit_suggestion"], session["selected_item"]),
             returned=session["fit_card"],
+            note=f"{len(session['wardrobe'].get('items') or [])} wardrobe item(s)",
         )
+        # print("DEBUG outfit still matches session:", session["outfit_suggestion"] is not None)
+
+        
 
     except ModelUnavailable as exc:
         session["error"] = (

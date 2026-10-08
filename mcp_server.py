@@ -76,16 +76,23 @@ def search_listings(
     max_price: float | None = None,
 ) -> list[dict]:
     """
-    Search listings using required keywords and optional filters.
+    Search secondhand listings by keywords, with an optional size and price limit.
 
     Args:
-        description: Required search keywords as a string, matched against listing descriptions.
-        size: Optional size to match exactly (for example, "M" or "10").
-        max_price: Optional maximum price in whole dollars. Listings priced
-            above this amount are excluded.
+        description: Required search keywords as a string (for example,
+            "vintage graphic tee"). Matched against each listing's title,
+            description, category, colors, style tags, brand and condition.
+        size: Optional size, matched case-insensitively against each part of
+            a listing's size, so "M" matches "S/M". One-size listings always
+            match. Leave it out to skip size filtering.
+        max_price: Optional maximum price in dollars, inclusive (for example,
+            30 or 29.99). Leave it out to skip price filtering.
 
     Returns:
-        A list of matching listing dictionaries, or an empty list if none match.
+        A list of up to 10 matching listing dicts, best match first, each with
+        id, title, description, category, style_tags, size, condition, price,
+        colors, brand (may be None) and platform. Returns an empty list if
+        nothing matches.
     """
     return _search_listings_impl(description, size, max_price)
 #

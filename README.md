@@ -313,19 +313,120 @@ that produced it:
 **Happy path**
 
 ```
+$ python app.py ask "Denim Jeans with grey color" --trace
 
+[1] parse_query
+      in:  Denim Jeans with grey color
+      out: dict with keys: description, size, max_price
+      →    description= 'Denim Jeans with grey color' / Size = None / max_price = None
+[2] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: 10 items: Vintage Levi's 501 Jeans — Medium Wash, Straight Leg Black Jeans — Faded, Denim Jacket — Light Wash, Cropped … +7 more
+      →    10 match(es)
+[3] select_item
+      out: Vintage Levi's 501 Jeans — Medium Wash ($38.0, depop)
+[4] suggest_outfit
+      in:  Vintage Levi's 501 Jeans — Medium Wash ($38.0, depop)
+      out: Here are two wearable, everyday outfits centered around your new Vintage Levi's 501 Jeans:  ### Outfit 1: Effo…
+      →    10 wardrobe item(s)
+[5] create_fit_card
+      in:  ("Here are two wearable, everyday outfits centered around your new Vintage Levi's 501 Jeans:\n\n### Outfit 1: …
+      out: Found my new holy grail Vintage Levi's 501 Jeans for just $38 on Depop, and I am obsessed with this effortless…
+      →    10 wardrobe item(s)
+
+  Found:    Vintage Levi's 501 Jeans — Medium Wash — $38.0 on depop
+
+  Outfit:   Here are two wearable, everyday outfits centered around your new Vintage Levi's 501 Jeans:
+
+### Outfit 1: Effortless Off-Duty (Casual & Streetwear)
+*This look plays on classic casual basics, letting the vintage wash of the 501s take center stage while keeping the vibe relaxed and comfortable.*
+
+* **Thrifted Item:** Vintage Levi's 501 Jeans — Medium Wash
+* **Wardrobe Pieces:**
+  * **White ribbed tank top** (`w_003`) tucked into the waistband to create a clean, fitted base.
+  * **Oversized grey crewneck sweatshirt** (`w_004`) layered over the tank for an easy, cozy silhouette.
+  * **Chunky white sneakers** (`w_007`) to anchor the streetwear aesthetic.
+  * **Black crossbody bag** (`w_010`) for hands-free daily errands.
+
+---
+
+### Outfit 2: Edgy Contrast (Retro-Cool)
+*Leaning into the 90s vintage roots of the 501s, this outfit pairs classic denim with black layers and hardware for a subtle grunge edge.*
+
+* **Thrifted Item:** Vintage Levi's 501 Jeans — Medium Wash
+* **Wardrobe Pieces:**
+  * **Black cropped zip hoodie** (`w_005`) worn zipped up to create a sharp contrast against the medium-wash denim.
+  * **Brown leather belt** (`w_009`) threaded through the loops to add a classic touch and break up the black and blue.
+  * **Black combat boots** (`w_008`) to give the straight-leg hem a tougher, grounded finish.
+
+  Fit card: Found my new holy grail Vintage Levi's 501 Jeans for just $38 on Depop, and I am obsessed with this effortless off-duty streetwear vibe! Paired them with a cozy grey crewneck and chunky sneakers for the ultimate casual, running-errands look. Honestly, nothing beats broken-in vintage denim that fits like a glove. ✨👖
+
+0 model calls this session, 2 served from cache
 ```
 
 **Empty search**
 
 ```
+$ python app.py ask "Denim Jeans under $20" --trace
 
+[1] parse_query
+      in:  Denim Jeans under $20
+      out: dict with keys: description, size, max_price
+      →    description= 'Denim Jeans' / Size = None / max_price = 20.0
+[2] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: [] (empty)
+      →    0 match(es)
+[3] branch
+      →    search returned []: stopping before suggest_outfit
+
+  Nothing in the listings matched description 'Denim Jeans', under $20.
+Things to change: try broader words — 'jacket' finds more than 'cropped corduroy jacket'; raise the price ceiling above $20.
+
+0 model calls this session
 ```
 
 **On the MCP move:** <!-- what changed in your code, and whether anything
 behaved differently afterwards. If the rewire didn't work, say exactly where it
 broke — the error text and the last thing that worked. That earns the point in
 full. -->
+
+I moved `search_listings` onto MCP. In `mcp_server.py`, I registered it with `@mcp.tool()`, kept the same inputs (`description: str`, `size: str | None`, `max_price: float | None`), and wrote a description for a reader who can't see the code. The function body just calls the existing implementation in `tools.py`. In `agent.py`, `run_agent` now calls the tool through `_search()`, which uses `mcp_client.call_tool("search_listings", ...)`. If the MCP server can't be reached, it prints "MCP server not available, falling back to direct call." and calls `search_listings` directly, so the agent keeps working. The trace labels this step `search_listings (via MCP)`.
+
+The rewire worked. `python mcp_client.py` listed `search_listings` with its description and its three inputs, and none of my runs printed the fallback message, so every search went through the server. The MCP move itself didn't change any results, because the server calls the same search code. In the same commit, though, I also changed the search scoring to match keywords against the title, category, colors, style tags, brand and condition, not just the description. After that, "vintage graphic tee under $30" returned 10 matches instead of 8, and the first result changed from "Graphic Tee — 2003 Tour Bootleg Style" to "Y2K Baby Tee — Butterfly Print".
+
+**Failure tests**
+
+I triggered each failure on purpose and recorded what the agent said.
+
+| Failure                                                          | How I triggered it                                                                                                    | What the agent said                                                                                                                                                                                                                                                                                                                          | Result                                                                                                                                                                                                                                |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Empty search                                                     | `python app.py ask "Denim Jeans under $20"`                                                                           | "Nothing in the listings matched description 'Denim Jeans', under $20. Things to change: try broader words — 'jacket' finds more than 'cropped corduroy jacket'; raise the price ceiling above $20."                                                                                                                                         | Stopped before `suggest_outfit` and named what to change. No model calls.                                                                                                                                                             |
+| Empty wardrobe                                                   | `python app.py ask "hoodie under $50" --empty-wardrobe`                                                               | "Here are two easy, wearable ways to style this vintage faded black hoodie using common wardrobe basics: …"                                                                                                                                                                                                                                  | Returned general styling advice. The trace shows `0 wardrobe item(s)`. No crash and no empty string.                                                                                                                                  |
+| Model unavailable (bad key)                                      | Changed one character of `GEMINI_API_KEY` in `.env`, then ran `python app.py ask "hoodie under $50" --empty-wardrobe` | "The model couldn't be reached, so the outfit and caption steps didn't run. The search worked — 1 listing(s) were found. Check GEMINI_API_KEY in your .env, then run the same query again. What the service said: The model rejected your API key. Check GEMINI_API_KEY in your .env file, or create a fresh key at aistudio.google.com."    | Stopped with a message instead of a stack trace. The search results were kept.                                                                                                                                                        |
+| Model unavailable (service overloaded, not triggered on purpose) | `python app.py ask "vintage graphic tee under $30"` during a Gemini outage                                            | "The model couldn't be reached, so the outfit and caption steps didn't run. The search worked — 10 listing(s) were found. Check GEMINI_API_KEY in your .env, then run the same query again. What the service said: Couldn't reach the model: 503 UNAVAILABLE … 'This model is currently experiencing high demand … Please try again later.'" | No crash, but the message is misleading. The key was fine, so "Check GEMINI_API_KEY" points the user at the wrong fix. It also says the outfit step didn't run, but `suggest_outfit` had succeeded and only `create_fit_card` failed. |
+
+```
+$ python app.py ask "hoodie under $50" --empty-wardrobe     # with a broken key
+
+[1] parse_query
+      in:  hoodie under $50
+      out: dict with keys: description, size, max_price
+      →    description= 'hoodie' / Size = None / max_price = 50.0
+[2] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: 1 items: Vintage Graphic Hoodie — Faded Black
+      →    1 match(es)
+[3] select_item
+      out: Vintage Graphic Hoodie — Faded Black ($26.0, depop)
+[4] model unavailable
+      →    stopping, search results kept
+
+  The model couldn't be reached, so the outfit and caption steps didn't run. The search worked — 1 listing(s) were found. Check GEMINI_API_KEY in your .env, then run the same query again.
+What the service said: The model rejected your API key. Check GEMINI_API_KEY in your .env file, or create a fresh key at aistudio.google.com.
+
+1 model calls this session
+```
 
 ---
 
